@@ -1,18 +1,27 @@
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
 
-/.idea
-test.ipynb
-test.ipynb
-test.ipynb
-currentVideo.avi
+# Python and Jupyter
+__pycache__/
+.ipynb_checkpoints/
+
+# Data and recordings (LRS2 cannot be redistributed)
+data/
+*.mp4
+*.h264
+*.avi
+currentFrame.png
+currentProcessedFrame.png
 currentframe.jpg
-ideas & suggestions
-image.jpg
-ideas & suggestions
-test.ipynb
-.ipynb_checkpoints/Lipreading-checkpoint.ipynb
-Eye Gaze/EyeGaze.ipynb
-ways this is better
-test.ipynb
+
+# Model checkpoints written during training
 *.h5
+!models/*.weights.h5
+finalModelSavedModel/
+
+# Local notes
 ideas & suggestions
-test.ipynb
+ways this is better
+Eye Gaze/

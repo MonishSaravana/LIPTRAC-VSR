@@ -1,0 +1,5 @@
+# Raspberry Pi 5 inference (pi/)
+tensorflow
+opencv-python
+numpy
+picamera2
