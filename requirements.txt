@@ -1,0 +1,7 @@
+# Training, evaluation and TensorFlow Lite export (notebooks/)
+tensorflow
+opencv-python
+numpy
+jiwer
+matplotlib
+pandas

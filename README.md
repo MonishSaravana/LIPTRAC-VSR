@@ -1,56 +1,89 @@
-# LIP-TRAC: Visual Speech Recognition for Enhanced Communication
+# LIP-TRAC
 
-## Overview
+LIP-TRAC (Lipreading through a Temporal Recurrent And Convolutional network) is a visual speech recognition model that transcribes speech from video of a speaker's mouth. It is a 3D-convolutional and bidirectional-GRU network trained with CTC loss on the Oxford-BBC LRS2 dataset, and it runs on a Raspberry Pi 5 through TensorFlow Lite.
 
-LIP-TRAC is a research project focused on developing an accessible and efficient visual speech recognition (VSR) system. It aims to address the challenges faced by individuals with hearing impairments by transcribing speech from lip movements. This project prioritizes both accuracy and real-time performance, to maximize its usability in practical, everyday scenarios. It utilizes the power of artificial intelligence to address current gaps in the area of visual speech recognition.
+Author: Monish Saravana Kumar Divya Sundari ([monishsaravana.com](https://monishsaravana.com/))
 
-## Project Goals
+## Repository layout
 
-*   To develop a lightweight and efficient model for real-time lipreading.
-*   To balance transcription accuracy with low latency to enable practical use.
-*   To offer a cost-effective and accessible solution compared to existing assistive technologies.
+```
+assets/       Haar cascade used for face detection
+docs/         Project notes and the specification document
+models/       Trained weights (Keras) and TensorFlow Lite exports
+notebooks/
+  data/       Building the training folders and dataset statistics
+  training/   Training notebooks (model definition, data pipeline, CTC loss)
+  export/     Saving the model and converting it to TensorFlow Lite
+  scratch/    Small experiments
+pi/           Raspberry Pi 5 capture, preprocessing and inference scripts
+```
 
-## Key Features
+## Model
 
-*   **Lightweight CRNN Architecture:** Employs a convolutional recurrent neural network (CRNN) architecture designed for efficient computation.
-*   **Connectionist Temporal Classification (CTC) Loss:** Utilizes CTC loss to handle the unaligned nature of lip movements and audio transcriptions.
-*   **In-Video Normalization:** A technique to improve signal detection, and reduce the amount of resources needed to store training data.
-*   **Raspberry Pi Deployment:** The code can be deployed on a Raspberry Pi, a low cost and widely available platform.
-*   **Haar Cascade Face Detection**: Utilizes Haar Cascade classifiers to automate lip region cropping.
+Input frames are grayscale 40×120 mouth crops, normalized per clip by subtracting the clip's mean pixel value and dividing by its standard deviation.
 
-## Methodology
+| # | Layer | Configuration | Parameters |
+|---|---|---|---:|
+| 1 | Conv3D | 32 filters, 3×3×3, same padding, ReLU | 896 |
+| 2 | MaxPool3D | 1×2×2 | 0 |
+| 3 | Conv3D | 64 filters, 3×3×3, same padding, ReLU | 55,360 |
+| 4 | MaxPool3D | 1×2×2 | 0 |
+| 5 | Conv3D | 96 filters, 3×3×3, same padding, ReLU | 165,984 |
+| 6 | MaxPool3D | 1×2×2 | 0 |
+| 7 | TimeDistributed(Flatten) | 7,200 features per frame | 0 |
+| 8 | Bidirectional GRU | 256 units per direction | 11,455,488 |
+| 9 | Dropout | 0.5 | 0 |
+| 10 | Bidirectional GRU | 256 units per direction | 1,182,720 |
+| 11 | Dropout | 0.5 | 0 |
+| 12 | Dense, softmax | 29 classes (A to Z, space, padding, CTC blank) | 14,877 |
+| | **Total** | | **12,875,325** |
 
-The LIP-TRAC pipeline can be broken down into four main stages:
+## Data
 
-1.  **Data Curation:**
-    *   The BBC LRS2 dataset was used for training.
-    *   Frames are pre-processed by cropping the lip region using computer vision (HAAR Cascade Classifiers).
-2.  **Normalization and Encoding:**
-    *   The visual data is normalized to account for lighting variations, improving robustness.
-    *   Transcript data is encoded for use in machine learning.
-3.  **Training:**
-    *   A CRNN model is trained, using transfer learning and batch normalizations.
-    *   The model was trained to maximize for accuracy and minimize for inference time.
-    *   A custom learning rate scheduler is used for more efficient and robust training.
-4.  **Evaluation & Deployment:**
-    *   The trained model is tested on a dedicated data set.
-    *  To ensure real time capability, the test is conducted by a computer, to quantify the inference time.
-    *   Results are evaluated against key metrics, to ensure that it is optimized for real world performance.
+LRS2 is not included. Its license does not allow redistribution, so request access from the [Visual Geometry Group](https://www.robots.ox.ac.uk/~vgg/data/lip_reading/lrs2.html) and download it yourself.
 
-## Model Architecture
+The notebooks in `notebooks/data/` prepare the data:
 
-The model is a hybrid architecture that consists of both 3D convolutional and recurrent components. It follows a Convolutional Recurrent Neural Network (CRNN).
+- `fileRearrange.ipynb` copies every clip from LRS2's `mvlrs_v1/main` folders into one flat folder (`allFiles`), renaming each file to `<folder>_<clip>`.
+- `trainFileGen.ipynb` copies a random sample of clips and transcripts from that folder into a training folder (`trainFiles1`, and so on).
+- `dataStats.ipynb` computes frame and character counts; its output is in `dataStats.txt`.
+- `NumToWord.ipynb` converts numerals in transcripts to words.
 
-*   **3D Convolution**: 3D convolution layers that extract both spatial and temporal features from the video.
-*   **GRU Layers**: Gated Recurrent Unit layers to model the temporal context of lip movements.
-*   **CTC Loss**: A method for connecting the model to a text output.
+The notebooks use absolute Windows paths (for example `A:\Lip Reading\Potential Datasets\BBC LRS2\...`). Change `rootDir`, `rootDir2` and the `list_files` patterns to match where your copy of LRS2 lives.
 
-## Future Work
+## Training
 
+The notebooks in `notebooks/training/` define the data pipeline, the model (`createModel`) and the CTC loss, then train with Adam. They are development runs kept for reference:
 
-*   **Improved Robustness:** To add to its use in the real world, try improving the model to deal with noisy data, such as different lighting conditions, different video angles, and backgrounds.
-*   **Multilingual Capability**: Develop the model to perform in languages beyond English.
-*   **N-Gram Implementation**: To predict sequences of words utilizing context, in a similar fashion to "Autocorrect" on your phone. 
+- `Lipreading.ipynb` and `LipreadingMOREEPOCHS.ipynb` train on the `trainFiles1` sample.
+- `Lipreading_MOREDATA.ipynb` and `Lipreading_MOREDATA2.ipynb` train on a larger sample (`allFiles2`). The second one uses a smaller model.
 
-## Contact 
-Portfolio: [Get in touch!](https://monishsaravana.com/)
+Training was done on an NVIDIA RTX 3060 Ti (8 GB).
+
+## Export to TensorFlow Lite
+
+`notebooks/export/` saves the trained model and converts it to TensorFlow Lite with default (dynamic-range) quantization. `tfLiteFinal.ipynb` and `tflitetest.ipynb` run the converted model and include a NumPy implementation of CTC decoding.
+
+## Raspberry Pi 5
+
+The scripts in `pi/` run the deployed model:
+
+| Script | Purpose |
+|---|---|
+| `lipread.py` | Entry point. Records 75 frames, builds the cropped mouth video, runs the model and prints the time taken by each step. |
+| `vidProcessing.py` | Records from the camera with `picamera2` and writes the cropped face video. |
+| `cropFuncs.py` | Haar-cascade face detection and the relative mouth crop. |
+| `modelPredictions.py` | Preprocesses a clip, runs the TensorFlow Lite model and decodes the output with greedy CTC decoding. |
+| `recordVideoFromCam.py`, `processVideoFromCam.py` | Earlier capture and processing scripts. |
+
+The scripts expect the files laid out as they were on the device:
+
+- `cropFuncs.py` loads the cascade from `util/haarcascade_frontalface_default.xml`. Copy `assets/haarcascade_frontalface_default.xml` there, or next to the scripts for the older capture scripts.
+- `modelPredictions.py` loads the model from `GDRIVE/finalModelCUSTOM.tflite`. Point it at `pi/finalModel.tflite` or a model from `models/`.
+
+## Setup
+
+```
+pip install -r requirements.txt        # training and export
+pip install -r pi/requirements.txt     # on the Raspberry Pi
+```
