@@ -11,10 +11,11 @@ assets/       Haar cascade used for face detection
 docs/         Project notes and the specification document
 models/       Trained weights (Keras) and TensorFlow Lite exports
 notebooks/
-  data/       Building the training folders and dataset statistics
-  training/   Training notebooks (model definition, data pipeline, CTC loss)
-  export/     Saving the model and converting it to TensorFlow Lite
-  scratch/    Small experiments
+  data/        Building the training folders and dataset statistics
+  training/    final_run.ipynb (reconstructed final run) and the development notebooks
+  evaluation/  evaluate_heldout.ipynb: WER and CER on the held-out clips
+  export/      Saving the model and converting it to TensorFlow Lite
+  scratch/     Small experiments
 pi/           Raspberry Pi 5 capture, preprocessing and inference scripts
 ```
 
@@ -53,12 +54,18 @@ The notebooks use absolute Windows paths (for example `A:\Lip Reading\Potential 
 
 ## Training
 
-The notebooks in `notebooks/training/` define the data pipeline, the model (`createModel`) and the CTC loss, then train with Adam. They are development runs kept for reference:
+`notebooks/training/final_run.ipynb` is the clean, unexecuted reconstruction of the run that produced `models/FINAL_LIPMODEL.weights.h5` and the numbers in the paper: 1,139 clips from LRS2 `main`, batches of 4, a 60/40 split (684 training clips, 455 held-out), the 12.9M-parameter model, CTC loss, and a staged Adam schedule (2e-4, 6e-5, 2e-5 and 7e-6 with exponential decay in the last two stages). It logs held-out WER and CER after every epoch and draws the training curves. The epochs per stage are a placeholder summing to 300; the original notebooks were resumed several times and do not record the count.
 
-- `Lipreading.ipynb` and `LipreadingMOREEPOCHS.ipynb` train on the `trainFiles1` sample.
+The other notebooks in `notebooks/training/` are the development runs the reconstruction was taken from, kept for reference:
+
+- `Lipreading.ipynb` and `LipreadingMOREEPOCHS.ipynb` train on the `trainFiles1` sample and are the runs that saved `FINAL_LIPMODEL.weights.h5`.
 - `Lipreading_MOREDATA.ipynb` and `Lipreading_MOREDATA2.ipynb` train on a larger sample (`allFiles2`). The second one uses a smaller model.
 
 Training was done on an NVIDIA RTX 3060 Ti (8 GB).
+
+## Evaluation
+
+`notebooks/evaluation/evaluate_heldout.ipynb` (unexecuted) loads the saved weights, rebuilds the split, and computes corpus-level WER and CER with `jiwer`, decoding with CTC beam search (beam width 100, as in the original evaluation) and greedily (as on the Raspberry Pi). It can also run the same clips through the quantized TensorFlow Lite model. The shuffle in the original run was unseeded, so the notebooks fix a seed and re-draw the split; the held-out clips are not the same 455 as in the reported run.
 
 ## Export to TensorFlow Lite
 
